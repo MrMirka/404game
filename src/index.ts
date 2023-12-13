@@ -11,11 +11,11 @@ import { Player } from './models/Character';
 import { AnimationPosition } from './animation/controls';
 
 import { characterAtlasData } from './utils/configurations';
-import { findTargetPoint, getSafeDestination2, isClickToObject, isPathClear } from './utils/gameMechanics'
+import { findTargetPoint, getPath, getSafeDestination, isClickToObject, isPathClear, reflectVector } from './utils/gameMechanics'
 import { Ball } from './models/Ball'
 import { getDistance } from './utils/Hepters'
 import { objectsColl } from './models/CollitionObjects'
-import { DrawBoundingBox } from './utils/Draw'
+import { DrawBoundingBox, drawLine } from './utils/Draw'
 import { Collisions } from './utils/Collition'
 
 
@@ -45,30 +45,39 @@ const colLine = collitions.getCollitionsItems()
 
 const banny = new Player(characterAtlasData, { x: window.innerWidth / 2, y: window.innerHeight / 2 })
 banny.init(app.stage)
-const movaAction = new AnimationPosition(400, app.ticker)
+const characterAction = new AnimationPosition(100, app.ticker)
 
 const ball = new Ball('/img/ball.png', { x: Math.random() * window.innerWidth, y: Math.random() * window.innerHeight })
 ball.init(app.stage)
 const ballAction = new AnimationPosition(900, app.ticker)
 
 document.addEventListener('click', (event) => {
+    characterAction.resetToDefault()
     const isKick = isClickToObject(ball.getPosition(), { x: event.clientX, y: event.clientY }, 40);
-    const intersectionCoordinate = getSafeDestination2(banny.getPosition(), { x: event.clientX, y: event.clientY }, colLine, 15)
+    //const intersectionCoordinate = getSafeDestination(banny.getPosition(), { x: event.clientX, y: event.clientY }, colLine, 15)
+    const reflects = getPath(banny.getPosition(), { x: event.clientX, y: event.clientY }, colLine,15)
     
-    movaAction.updateTicker(app.ticker)
-    movaAction.setAnimationCoordinate(banny.getPosition(), intersectionCoordinate ? intersectionCoordinate : { x: event.clientX, y: event.clientY })
+    reflects.unshift(banny.getPosition())
+    const lineR = drawLine(reflects)
+    app.stage.addChild(lineR)
+    
+    characterAction.updateTicker(app.ticker)
+   // characterAction.setAnimationCoordinate(banny.getPosition(), intersectionCoordinate ? intersectionCoordinate : { x: event.clientX, y: event.clientY })
+    characterAction.setMultiplePath(reflects)
+  
    
     if(isKick) {
         var playerStart = banny.getPosition()
     }
-
-    movaAction.start({
+    
+   
+   /*  characterAction.start({
         onStart: () => { banny.run() },
         onUpdate: (position) => { banny.moveTo({ x: position.x, y: position.y }) },
         onStop: () => {
             banny.stop()
             if (isKick) {
-                const hitPower = getDistance(playerStart, ball.getPosition())
+                const hitPower = getDistance(playerStart, ball.getPosition()) //Дистация на которую улетит мяч, равна дистанции до удара 
                 const target = findTargetPoint(playerStart, ball.getPosition(), hitPower)
                 ballAction.updateTicker(app.ticker)
                 ballAction.setAnimationCoordinate(ball.getPosition(), target)
@@ -80,9 +89,17 @@ document.addEventListener('click', (event) => {
                 })
             }
         }
+    }); */
+
+    characterAction.startPath({
+        onStart: () => { banny.run() },
+        onUpdate: (position) => { banny.moveTo({ x: position.x, y: position.y }) },
+        onStop: () => {
+            banny.stop()
+        }
     });
     
-
+ 
 
 })
 

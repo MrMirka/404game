@@ -1,5 +1,6 @@
 import { CollitionLine } from "./Collition";
 import { Point } from "./CustomTypes";
+import { getDistance } from "./Hepters";
 
 /**
  * Определяет, есть ли на пути персонажа препятствие
@@ -34,65 +35,7 @@ export function isPathClear(
  * @param buffer размер дистанции на которой персонаж останавливается перед препятствием
  * @returns 
  */
-export function getSafeDestination(
-  startPosition: Point,
-  endPosition: Point,
-  obstacles: Point[],
-  buffer: number = 1
-): Point {
 
-  // Направление движения
-  const dir = {
-    x: endPosition.x - startPosition.x,
-    y: endPosition.y - startPosition.y
-  };
-
-  // Нормализация направления
-  const mag = Math.sqrt(dir.x ** 2 + dir.y ** 2);
-  const normDir = {
-    x: dir.x / mag,
-    y: dir.y / mag
-  };
-
-  // Проверяем каждое препятствие
-  let minDist = mag; // Минимальное расстояние до препятствия
-  let intersectionPoint = null; // Точка пересечения
-
-  obstacles.forEach(obstacle => {
-    // Вектор от начальной точки до препятствия
-    const toObstacle = {
-      x: obstacle.x - startPosition.x,
-      y: obstacle.y - startPosition.y
-    };
-
-    // Проекция вектора на направление движения
-    const scalarProjection = (toObstacle.x * normDir.x + toObstacle.y * normDir.y);
-
-    // Точка на линии движения, ближайшая к препятствию
-    const closestPoint = {
-      x: startPosition.x + scalarProjection * normDir.x,
-      y: startPosition.y + scalarProjection * normDir.y
-    };
-
-    // Проверяем, лежит ли ближайшая точка на отрезке движения и в радиусе buffer от препятствия
-    if (scalarProjection > 0 && scalarProjection < minDist &&
-      Math.sqrt((closestPoint.x - obstacle.x) ** 2 + (closestPoint.y - obstacle.y) ** 2) < buffer) {
-      minDist = scalarProjection - buffer; // Уменьшаем расстояние, чтобы создать буфер
-      intersectionPoint = closestPoint; // Обновляем точку пересечения
-    }
-  });
-
-  if (intersectionPoint) {
-    // Возвращаем точку перед препятствием, отступив на buffer
-    return {
-      x: Math.floor(startPosition.x + normDir.x * minDist),
-      y: Math.floor(startPosition.y + normDir.y * minDist)
-    };
-  }
-
-  // Если нет пересечения, возвращаем исходную конечную точку
-  return endPosition;
-}
 
 /**
  * Вычисляет, был ли сделан клик по заданной области
@@ -190,7 +133,7 @@ function getIntersection(line1: CollitionLine, line2: CollitionLine): Point | nu
   return null;
 }
 
-export function getSafeDestination2(
+export function getSafeDestination(
   startPosition: Point,
   endPosition: Point,
   obstacles: CollitionLine[],
@@ -227,4 +170,84 @@ export function getSafeDestination2(
 
   // Возвращаем конечную точку, если пересечений нет
   return endPosition;
+}
+
+
+
+/**
+ * Находит вектор отражения от прамого угла
+ * @param startPoint начальная позиция
+ * @param collisionPoint точка перечечения с препятствием
+ * @param targetPoint когечная точка
+ * @param normal нормаль {x:1, y:0} или {x:0, y:1}
+ * @returns 
+ */
+export function reflectVector(startPoint:Point , collisionPoint:Point, targetPoint:Point, normal:Point) {
+  // Вектор движения от начальной точки до точки столкновения
+  let directionVector = { x: targetPoint.x - collisionPoint.x, y: targetPoint.y - collisionPoint.y };
+
+
+  // Отражение по оси X
+  if (Math.abs(normal.x) === 1 && Math.abs(normal.y) === 0) {
+      return {
+          x: collisionPoint.x - directionVector.x,
+          y: targetPoint.y
+      };
+  }
+  // Отражение по оси Y
+  else if (Math.abs(normal.x) === 0 && Math.abs(normal.y) === 1) {
+      return {
+          x: targetPoint.x,
+          y: collisionPoint.y - directionVector.y
+      };
+  }
+}
+
+
+export function getPath(
+  startPosition: Point,
+  endPosition: Point,
+  obstacles: CollitionLine[],
+  buffer: number = 1
+): Point[] {
+  let path: Point[] = []; // Инициализация пути
+
+  // Рассчитываем направление и длину вектора движения
+  const dir = { x: endPosition.x - startPosition.x, y: endPosition.y - startPosition.y };
+  const mag = Math.sqrt(dir.x ** 2 + dir.y ** 2);
+  const normDir = { x: dir.x / mag, y: dir.y / mag }; // Нормализованный вектор направления
+
+  // Переменные для хранения ближайшего пересечения и его расстояния
+  let closestIntersection: Point | null = null;
+  let closestDistance = mag;
+
+  // Пересечение движения с каждым препятствием
+  let xLine: CollitionLine = null; // Сохраняем ближайшую линию с которой произошло пересечение
+  obstacles.forEach(obstacle => {
+    const intersection = getIntersection({ p1: startPosition, p2: endPosition, normal: normDir }, obstacle);
+    if (intersection) {
+      const distToIntersection = Math.hypot(intersection.x - startPosition.x, intersection.y - startPosition.y);
+      if (distToIntersection < closestDistance) {
+        closestDistance = distToIntersection - buffer + 2; // Учитываем буфер
+        closestIntersection = intersection;
+        xLine = obstacle;
+      }
+    }
+  });
+
+  // Возвращаем ближайшую точку до пересечения с учетом буфера
+  if (closestIntersection && closestDistance > 0) {
+    const closestPoint = {
+      x: Math.floor(startPosition.x + closestDistance * normDir.x),
+      y: Math.floor(startPosition.y + closestDistance * normDir.y)
+    };
+    let newDispansePoint: Point = reflectVector(startPosition, closestPoint, endPosition, xLine.normal);
+    // Объединяем текущий путь с результатом рекурсивного вызова
+    path.push(closestPoint);
+    path = path.concat(getPath(closestPoint, newDispansePoint, obstacles, buffer));
+  } else {
+    path.push(endPosition);
+  }
+
+  return path;
 }
