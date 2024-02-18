@@ -114,7 +114,6 @@ export class AnimationPosition {
 
         this.animationHandler = () => {
             if (this.isAnimation) {
-                console.log(`Шаг ${this.currentStep} длинна ${this.path.length}`)
                  if (this.currentStep === this.path.length - 1) {
                     callbacks.onStop()
                     this.isAnimation = false
