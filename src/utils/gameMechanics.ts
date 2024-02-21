@@ -16,14 +16,14 @@ export function isPathClear(
   obstacles: Point[],
   threshold: number = 1
 ): boolean {
-  
+
   for (const obstacle of obstacles) {
     if (Math.min(startPosition.x, endPosition.x) - threshold <= obstacle.x && obstacle.x <= Math.max(startPosition.x, endPosition.x) + threshold &&
       Math.min(startPosition.y, endPosition.y) - threshold <= obstacle.y && obstacle.y <= Math.max(startPosition.y, endPosition.y) + threshold) {
       return false;
     }
   }
-  return true; 
+  return true;
 }
 
 /**
@@ -62,47 +62,47 @@ export function isClickToObject(positionObject: Point, positionClick: Point, rad
  * @returns 
  */
 export function findTargetPoint(playerPosition: Point, ballPosition: Point, hitPower: number): Point {
-    // Вектор от игрока к мячу (заметьте, что теперь мы вычитаем позицию игрока из позиции мяча)
-    const directionVector = {
-        x: ballPosition.x - playerPosition.x,
-        y: ballPosition.y - playerPosition.y,
-    };
+  // Вектор от игрока к мячу (заметьте, что теперь мы вычитаем позицию игрока из позиции мяча)
+  const directionVector = {
+    x: ballPosition.x - playerPosition.x,
+    y: ballPosition.y - playerPosition.y,
+  };
 
-    // Если игрок и мяч находятся в одной точке, вектор направления не может быть вычислен
-    if (directionVector.x === 0 && directionVector.y === 0) {
-        throw new Error("Player and ball are in the same position");
-    }
+  // Если игрок и мяч находятся в одной точке, вектор направления не может быть вычислен
+  if (directionVector.x === 0 && directionVector.y === 0) {
+    throw new Error("Player and ball are in the same position");
+  }
 
-    // Длина вектора
-    const length = Math.sqrt(directionVector.x ** 2 + directionVector.y ** 2);
+  // Длина вектора
+  const length = Math.sqrt(directionVector.x ** 2 + directionVector.y ** 2);
 
-    // Нормализация вектора
-    const normalizedVector = {
-        x: directionVector.x / length,
-        y: directionVector.y / length,
-    };
+  // Нормализация вектора
+  const normalizedVector = {
+    x: directionVector.x / length,
+    y: directionVector.y / length,
+  };
 
-    // Вектор перемещения
-    const movementVector = {
-        x: normalizedVector.x * hitPower,
-        y: normalizedVector.y * hitPower,
-    };
+  // Вектор перемещения
+  const movementVector = {
+    x: normalizedVector.x * hitPower,
+    y: normalizedVector.y * hitPower,
+  };
 
-    // Новая позиция мяча
-    const newBallPosition = {
-        x: ballPosition.x + movementVector.x,
-        y: ballPosition.y + movementVector.y,
-    };
+  // Новая позиция мяча
+  const newBallPosition = {
+    x: ballPosition.x + movementVector.x,
+    y: ballPosition.y + movementVector.y,
+  };
 
-    // Проверка, чтобы мяч не вышел за пределы поля
-    // Убедитесь, что вы заменили /* максимальный x */ и /* максимальный y */
-    // на реальные ограничения вашего игрового поля
-    const checkedBallPosition = {
-        x: Math.max(0, Math.min(newBallPosition.x, /* максимальный x */)),
-        y: Math.max(0, Math.min(newBallPosition.y, /* максимальный y */)),
-    };
+  // Проверка, чтобы мяч не вышел за пределы поля
+  // Убедитесь, что вы заменили /* максимальный x */ и /* максимальный y */
+  // на реальные ограничения вашего игрового поля
+  const checkedBallPosition = {
+    x: Math.max(0, Math.min(newBallPosition.x, /* максимальный x */)),
+    y: Math.max(0, Math.min(newBallPosition.y, /* максимальный y */)),
+  };
 
-    return checkedBallPosition;
+  return checkedBallPosition;
 }
 
 
@@ -182,24 +182,24 @@ export function getSafeDestination(
  * @param normal нормаль {x:1, y:0} или {x:0, y:1}
  * @returns 
  */
-export function reflectVector(startPoint:Point , collisionPoint:Point, targetPoint:Point, normal:Point) {
+export function reflectVector(startPoint: Point, collisionPoint: Point, targetPoint: Point, normal: Point) {
   // Вектор движения от начальной точки до точки столкновения
   let directionVector = { x: targetPoint.x - collisionPoint.x, y: targetPoint.y - collisionPoint.y };
 
 
   // Отражение по оси X
   if (Math.abs(normal.x) === 1 && Math.abs(normal.y) === 0) {
-      return {
-          x: collisionPoint.x - directionVector.x,
-          y: targetPoint.y
-      };
+    return {
+      x: collisionPoint.x - directionVector.x,
+      y: targetPoint.y
+    };
   }
   // Отражение по оси Y
   else if (Math.abs(normal.x) === 0 && Math.abs(normal.y) === 1) {
-      return {
-          x: targetPoint.x,
-          y: collisionPoint.y - directionVector.y
-      };
+    return {
+      x: targetPoint.x,
+      y: collisionPoint.y - directionVector.y
+    };
   }
 }
 
@@ -250,4 +250,18 @@ export function getPath(
   }
 
   return path;
+}
+
+/**
+ * Определяет, находится ли точки внутри фигуры
+ * @param squareCorners 
+ * @param testPoint 
+ * @returns 
+ */
+export function isPointInsideSquare(squareCorners: Point[], testPoint: Point): boolean {
+  const topLeft = squareCorners[0];
+  const bottomRight = squareCorners[2];
+
+  return (testPoint.x >= topLeft.x && testPoint.x <= bottomRight.x &&
+    testPoint.y >= topLeft.y && testPoint.y <= bottomRight.y);
 }

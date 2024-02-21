@@ -11,10 +11,10 @@ import { Player } from './models/Character';
 import { AnimationPosition } from './animation/controls';
 
 import { characterAtlasData } from './utils/configurations';
-import { findTargetPoint, getPath, getSafeDestination, isClickToObject, isPathClear, reflectVector } from './utils/gameMechanics'
+import { findTargetPoint, getPath, getSafeDestination, isClickToObject, isPathClear, isPointInsideSquare, reflectVector } from './utils/gameMechanics'
 import { Ball } from './models/Ball'
-import { getDistance } from './utils/Hepters'
-import { objectsColl } from './models/CollitionObjects'
+import { getDistance, simplyfyCollitionObj } from './utils/Hepters'
+import { objectsColl, goalEdge } from './models/CollitionObjects'
 import { DrawBoundingBox, drawLine } from './utils/Draw'
 import { Collisions } from './utils/Collition'
 import { lineShader } from './models/Shaders'
@@ -36,7 +36,7 @@ const plane = new PIXI.Mesh(planeGeometry, lineShader);
 app.stage.addChild(plane);
 
 
-const collitions = new Collisions()
+const collitions = new Collisions() //Препятствия
 
 objectsColl.forEach(element => {
     app.stage.addChild(DrawBoundingBox(element))
@@ -45,6 +45,16 @@ objectsColl.forEach(element => {
 collitions.initCollitions()
 const colLine = collitions.getCollitionsItems()
 
+const goal = new Collisions() //Ворота
+app.stage.addChild(DrawBoundingBox(goalEdge[0]))
+goal.addCollition(goalEdge[0])
+goal.initCollitions()
+const goalLInes = goal.getCollitionsItems()
+
+console.log(simplyfyCollitionObj(goalLInes))
+const testPoint = {x:597,y:155}
+console.log(isPointInsideSquare(simplyfyCollitionObj(goalLInes), testPoint))
+
 
 const banny = new Player(characterAtlasData, { x: window.innerWidth / 2, y: window.innerHeight / 2 })
 banny.init(app.stage)
@@ -52,7 +62,7 @@ const characterAction = new AnimationPosition(400, app.ticker)
 
 const ball = new Ball('/img/ball.png', { x: Math.random() * window.innerWidth, y: Math.random() * window.innerHeight })
 ball.init(app.stage)
-const ballAction = new AnimationPosition(300, app.ticker)
+const ballAction = new AnimationPosition(900, app.ticker)
 
 document.addEventListener('click', (event) => {
     characterAction.resetToDefault()
