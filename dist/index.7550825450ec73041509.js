@@ -4712,8 +4712,11 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   AnimationPosition: () => (/* binding */ AnimationPosition)
 /* harmony export */ });
+/* harmony import */ var _utils_Hepters__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/Hepters */ "./src/utils/Hepters.ts");
+
 class AnimationPosition {
     constructor(speed, ticker) {
+        this.currentStep = -1; //отризательное значение чтобы при выполнение initSpeedValue() начальное значение было 0
         this.isAnimation = false;
         this.speed = speed;
         this.ticker = ticker;
@@ -4727,6 +4730,18 @@ class AnimationPosition {
         this.from = from;
         this.to = to;
     }
+    setMultiplePath(path) {
+        this.path = path;
+    }
+    resetToDefault() {
+        this.currentStep = -1;
+    }
+    initSpeedValue() {
+        this.currentStep++;
+        if (this.currentStep < this.path.length - 1) {
+            this.speedValue = (0,_utils_Hepters__WEBPACK_IMPORTED_MODULE_0__.getSpeed)(this.path[this.currentStep], this.path[this.currentStep + 1], this.speed);
+        }
+    }
     /**
      * Запускаем анимацию
      * @param onUpdate каждый тик возвращает обновденные координаты X Y
@@ -4736,11 +4751,7 @@ class AnimationPosition {
             this.ticker.remove(this.animationHandler);
             this.animationHandler = undefined;
         }
-        let timeX = Math.abs(this.to.x - this.from.x) / this.speed;
-        let timeY = Math.abs(this.to.y - this.from.y) / this.speed;
-        let duration = Math.max(timeX, timeY) * 1000;
-        let speedX = (this.to.x - this.from.x) / duration;
-        let speedY = (this.to.y - this.from.y) / duration;
+        const speedValue = (0,_utils_Hepters__WEBPACK_IMPORTED_MODULE_0__.getSpeed)(this.from, this.to, this.speed);
         let startTime = null;
         this.isAnimation = true;
         callbacks.onStart();
@@ -4750,15 +4761,49 @@ class AnimationPosition {
                 if (!startTime)
                     startTime = currentTime;
                 let elapsedTime = currentTime - startTime; //Время с начала анимации
-                if (elapsedTime < duration) {
-                    let newX = this.from.x + speedX * elapsedTime;
-                    let newY = this.from.y + speedY * elapsedTime;
+                if (elapsedTime < speedValue.duration) {
+                    let newX = this.from.x + speedValue.speedX * elapsedTime;
+                    let newY = this.from.y + speedValue.speedY * elapsedTime;
                     callbacks.onUpdate({ x: newX, y: newY });
                 }
-                if (elapsedTime >= duration) {
+                if (elapsedTime >= speedValue.duration) {
                     callbacks.onStop();
                     this.isAnimation = false;
                     this.ticker.remove(this.animationHandler);
+                }
+            }
+        };
+        this.ticker.add(this.animationHandler);
+    }
+    startPath(callbacks) {
+        if (this.animationHandler) {
+            this.ticker.remove(this.animationHandler);
+            this.animationHandler = undefined;
+        }
+        this.initSpeedValue();
+        let startTime = null;
+        this.isAnimation = true;
+        callbacks.onStart();
+        this.animationHandler = () => {
+            if (this.isAnimation) {
+                if (this.currentStep === this.path.length - 1) {
+                    callbacks.onStop();
+                    this.isAnimation = false;
+                    this.ticker.remove(this.animationHandler);
+                }
+                let currentTime = performance.now(); //Тукущее время
+                if (!startTime)
+                    startTime = currentTime;
+                let elapsedTime = currentTime - startTime; //Время с начала анимации
+                if (elapsedTime < this.speedValue.duration) {
+                    let newX = this.path[this.currentStep].x + this.speedValue.speedX * elapsedTime;
+                    let newY = this.path[this.currentStep].y + this.speedValue.speedY * elapsedTime;
+                    callbacks.onUpdate({ x: newX, y: newY });
+                }
+                else {
+                    this.initSpeedValue();
+                    currentTime = performance.now();
+                    startTime = currentTime;
                 }
             }
         };
@@ -4778,6 +4823,80 @@ class AnimationPosition {
 
 /***/ }),
 
+/***/ "./src/models/Ball.ts":
+/*!****************************!*\
+  !*** ./src/models/Ball.ts ***!
+  \****************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   Ball: () => (/* binding */ Ball),
+/* harmony export */   Goal: () => (/* binding */ Goal)
+/* harmony export */ });
+/* harmony import */ var _SpritesController__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./SpritesController */ "./src/models/SpritesController.ts");
+/* harmony import */ var _Base__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./Base */ "./src/models/Base.ts");
+
+
+class Ball extends _Base__WEBPACK_IMPORTED_MODULE_1__.AnimatedObject {
+    constructor(url, position) {
+        super(position);
+        this.url = url;
+    }
+    init(stage) {
+        this.sprite = (0,_SpritesController__WEBPACK_IMPORTED_MODULE_0__.getSprite)(this.url);
+        this.sprite.anchor.set(0.5);
+        this.sprite.x = this.position.x;
+        this.sprite.y = this.position.y;
+        stage.addChild(this.sprite);
+    }
+    moveTo(position) {
+        this.position = position;
+        this.sprite.x = this.position.x;
+        this.sprite.y = this.position.y;
+    }
+}
+class Goal {
+    constructor(url, position) {
+        this.position = position;
+        this.url = url;
+    }
+    init(stage) {
+        this.sprite = (0,_SpritesController__WEBPACK_IMPORTED_MODULE_0__.getSprite)(this.url);
+        this.sprite.anchor.set(0.5);
+        this.sprite.x = this.position.x;
+        this.sprite.y = this.position.y;
+        stage.addChild(this.sprite);
+    }
+}
+
+
+/***/ }),
+
+/***/ "./src/models/Base.ts":
+/*!****************************!*\
+  !*** ./src/models/Base.ts ***!
+  \****************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   AnimatedObject: () => (/* binding */ AnimatedObject)
+/* harmony export */ });
+class AnimatedObject {
+    constructor(position) {
+        this.position = position;
+    }
+    getPosition() {
+        return { x: Math.floor(this.position.x), y: Math.floor(this.position.y) };
+    }
+}
+
+
+/***/ }),
+
 /***/ "./src/models/Character.ts":
 /*!*********************************!*\
   !*** ./src/models/Character.ts ***!
@@ -4790,18 +4909,20 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   Player: () => (/* binding */ Player)
 /* harmony export */ });
 /* harmony import */ var _SpritesController__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./SpritesController */ "./src/models/SpritesController.ts");
+/* harmony import */ var _Base__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./Base */ "./src/models/Base.ts");
 
-class Player {
+
+class Player extends _Base__WEBPACK_IMPORTED_MODULE_1__.AnimatedObject {
     constructor(animConfig, position) {
+        super(position);
         this.isWalk = false;
         this.animConfig = animConfig;
-        this.position = position;
     }
     /**
      * Ставит игрока с стартовую позицию
      * @param stage сцена PIXI.JS
      */
-    initPlayer(stage) {
+    init(stage) {
         if (stage) {
             (0,_SpritesController__WEBPACK_IMPORTED_MODULE_0__.getSpriteSheet)(this.animConfig).then(anim => {
                 this.sprite = anim;
@@ -4809,7 +4930,6 @@ class Player {
                 this.sprite.x = this.position.x;
                 this.sprite.y = this.position.y;
                 this.sprite.animationSpeed = 0.1666;
-                //this.sprite.play()
                 stage.addChild(this.sprite);
             });
         }
@@ -4824,9 +4944,6 @@ class Player {
             this.sprite.x = this.position.x;
             this.sprite.y = this.position.y;
         }
-    }
-    getPosition() {
-        return { x: Math.floor(this.sprite.x), y: Math.floor(this.sprite.y) };
     }
     getIsWalk() {
         return this.isWalk;
@@ -4844,6 +4961,94 @@ class Player {
         }
     }
 }
+
+
+/***/ }),
+
+/***/ "./src/models/CollitionObjects.ts":
+/*!****************************************!*\
+  !*** ./src/models/CollitionObjects.ts ***!
+  \****************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   goalEdge: () => (/* binding */ goalEdge),
+/* harmony export */   objectsColl: () => (/* binding */ objectsColl)
+/* harmony export */ });
+const objectsColl = [
+    {
+        id: 1,
+        coordinate: { x: 500, y: 550 },
+        width: 800,
+        height: 100
+    },
+    {
+        id: 2,
+        coordinate: { x: 700, y: 350 },
+        width: 400,
+        height: 60
+    },
+];
+const goalEdge = [
+    {
+        id: 1,
+        coordinate: { x: window.innerWidth / 2 - 200, y: 0 },
+        width: 400,
+        height: 150
+    }
+];
+
+
+/***/ }),
+
+/***/ "./src/models/Shaders.ts":
+/*!*******************************!*\
+  !*** ./src/models/Shaders.ts ***!
+  \*******************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   lineShader: () => (/* binding */ lineShader)
+/* harmony export */ });
+/* harmony import */ var pixi_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! pixi.js */ "./node_modules/pixi.js/lib/index.mjs");
+
+const lineShader = pixi_js__WEBPACK_IMPORTED_MODULE_0__.Shader.from(`
+
+    attribute vec2 aVertexPosition;
+    attribute vec2 aTextureCoord;
+
+    uniform mat3 projectionMatrix;
+
+    varying vec2 vTextureCoord;
+
+    void main(void) {
+        gl_Position = vec4((projectionMatrix * vec3(aVertexPosition, 1.0)).xy, 0.0, 1.0);
+        vTextureCoord = aTextureCoord;
+    }
+    `, `precision mediump float;
+
+    varying vec2 vTextureCoord;
+    float lineWidth = 0.5;       
+    float lineSpacing = 0.3;     
+    vec4 color1 = vec4(0.45, 0.64, 0.28, 1.0);           
+    vec4 color2 = vec4(0.36, 0.5, 0.22, 1.0);
+
+    void main(void) {
+        vec2 uv = vTextureCoord;
+        float lineFreq = 1.0 / lineSpacing;
+
+        if (mod(uv.y * lineFreq, 1.0) > lineWidth) {
+            gl_FragColor = color2 * 1.3; 
+        } else {
+            gl_FragColor = color1 * 1.3;
+        }
+    }
+
+`);
 
 
 /***/ }),
@@ -4881,6 +5086,206 @@ async function getSpriteSheet(config) {
     await spritesheet.parse();
     const anim = new pixi_js__WEBPACK_IMPORTED_MODULE_0__.AnimatedSprite(spritesheet.animations.Run);
     return anim;
+}
+
+
+/***/ }),
+
+/***/ "./src/utils/Collition.ts":
+/*!********************************!*\
+  !*** ./src/utils/Collition.ts ***!
+  \********************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   Collisions: () => (/* binding */ Collisions)
+/* harmony export */ });
+class Collisions {
+    constructor() {
+        this.collisionsObj = []; //
+        this.collisionsLines = []; //
+    }
+    /**
+     * Добавляем объект коллизии
+     * @param item эллемент реализующий CollisionsItem
+     */
+    addCollition(item) {
+        //item.width *= window.devicePixelRatio
+        //item.height *= window.devicePixelRatio
+        this.collisionsObj.push(item);
+    }
+    /**
+     * Удаляем объект коллизии
+     * @param targetId идентификатор объекта
+     */
+    deleteCollition(targetId) {
+        const index = this.collisionsObj.findIndex(item => item.id === targetId);
+        if (index !== -1) {
+            this.collisionsObj.splice(index, 1);
+        }
+    }
+    /**
+     * Возвращаем все объекты коллизии
+     * @returns
+     */
+    getCollitionsItems() {
+        return this.collisionsLines;
+    }
+    /**
+     * Разбираем Bounding Boxes на отдельыные линии и назначаем им нормали
+     */
+    initCollitions() {
+        this.collisionsObj.forEach(element => {
+            // Определяем направляющие векторы для сторон прямоугольника
+            const directions = [
+                { x: element.width, y: 0 },
+                { x: 0, y: element.height },
+                { x: -element.width, y: 0 },
+                { x: 0, y: -element.height } // Вверх
+            ];
+            // Начальная точка
+            let currentPoint = Object.assign({}, element.coordinate);
+            // Строим линии и их нормали
+            directions.forEach((dir, i) => {
+                const nextPoint = {
+                    x: currentPoint.x + dir.x,
+                    y: currentPoint.y + dir.y
+                };
+                const line = {
+                    p1: currentPoint,
+                    p2: nextPoint,
+                    normal: this.calculateNormal(currentPoint, nextPoint)
+                };
+                this.collisionsLines.push(line);
+                currentPoint = nextPoint; // Следующая стартовая точка для линии
+            });
+        });
+    }
+    /**
+     * Рассчитываем нормаль но двум точкам
+     * @param p1
+     * @param p2
+     * @returns вектор нормали
+     */
+    calculateNormal(p1, p2) {
+        // Вектор направления линии
+        const direction = { x: p2.x - p1.x, y: p2.y - p1.y };
+        // Нормаль к линии
+        const normal = { x: -direction.y, y: direction.x };
+        // Нормализация нормали (необязательно, если вам нужна только направление)
+        const length = Math.sqrt(normal.x * normal.x + normal.y * normal.y);
+        const normalizedNormal = { x: normal.x / length, y: normal.y / length };
+        return normalizedNormal;
+    }
+}
+
+
+/***/ }),
+
+/***/ "./src/utils/Draw.ts":
+/*!***************************!*\
+  !*** ./src/utils/Draw.ts ***!
+  \***************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   DrawBoundingBox: () => (/* binding */ DrawBoundingBox),
+/* harmony export */   drawLine: () => (/* binding */ drawLine)
+/* harmony export */ });
+/* harmony import */ var pixi_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! pixi.js */ "./node_modules/pixi.js/lib/index.mjs");
+
+function DrawBoundingBox(boundingBox) {
+    const rectangle = new pixi_js__WEBPACK_IMPORTED_MODULE_0__.Graphics();
+    rectangle.beginFill(0xff0000);
+    rectangle.drawRect(boundingBox.coordinate.x, boundingBox.coordinate.y, boundingBox.width, boundingBox.height);
+    rectangle.endFill();
+    return rectangle;
+}
+function drawLine(points) {
+    // Создаем новый экземпляр PIXI.Graphics
+    let line = new pixi_js__WEBPACK_IMPORTED_MODULE_0__.Graphics();
+    // Начинаем рисовать линию
+    line.lineStyle(2, 0xFFFFFF, 1); // Задаем стиль линии (толщина, цвет, прозрачность)
+    // Перемещаем "перо" в начальную точку
+    line.moveTo(points[0].x, points[0].y);
+    // Рисуем линии к каждой точке в массиве
+    points.forEach(point => {
+        line.lineTo(point.x, point.y);
+    });
+    // Добавляем нарисованную линию в приложение PIXI
+    return line;
+}
+
+
+/***/ }),
+
+/***/ "./src/utils/Hepters.ts":
+/*!******************************!*\
+  !*** ./src/utils/Hepters.ts ***!
+  \******************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   getDistance: () => (/* binding */ getDistance),
+/* harmony export */   getDuration: () => (/* binding */ getDuration),
+/* harmony export */   getSpeed: () => (/* binding */ getSpeed),
+/* harmony export */   simplyfyCollitionObj: () => (/* binding */ simplyfyCollitionObj)
+/* harmony export */ });
+/**
+ * Возвращает расстоние между двумя точками в пространстве
+ * @param firstPoint
+ * @param secondPoint
+ * @returns
+ */
+function getDistance(firstPoint, secondPoint) {
+    const distance = Math.sqrt(Math.pow(secondPoint.x - firstPoint.x, 2) +
+        Math.pow(secondPoint.y - firstPoint.y, 2));
+    return distance;
+}
+/**
+ * Возвращает значение приращения в такущий позиции
+ * @param from Начальная позиция объкета
+ * @param to Конечная позиция объекта
+ * @param speed скорось с которой объект движется
+ * @returns значение которое будет прибавляться к координате каждой в тиках анимации
+ */
+function getSpeed(from, to, speed) {
+    const result = { speedX: 0, speedY: 0, duration: 0 };
+    result.duration = getDuration(from, to, speed);
+    result.speedX = (to.x - from.x) / result.duration;
+    result.speedY = (to.y - from.y) / result.duration;
+    return result;
+}
+/**
+ * Рассчитывает продлолжительность анимации
+ * @param from
+ * @param to
+ * @param speed
+ * @returns
+ */
+function getDuration(from, to, speed) {
+    let timeX = Math.abs(to.x - from.x) / speed;
+    let timeY = Math.abs(to.y - from.y) / speed;
+    let duration = Math.max(timeX, timeY) * 1000;
+    return duration;
+}
+/**
+ * Делает упрощенную версию объекта коллизии без номралей и с удалкнием дублируюзих точек.
+ * Используется для определения находится ди опрееленная точка в границах объекта коллизии
+ * @param obj
+ * @returns
+ */
+function simplyfyCollitionObj(obj) {
+    const cleanArray = obj.flatMap(item => [item.p1, item.p2]);
+    const uniquePointsSet = new Set(cleanArray.map(point => JSON.stringify(point)));
+    const uniquePointsArray = [...uniquePointsSet].map(str => JSON.parse(str));
+    return uniquePointsArray;
 }
 
 
@@ -4968,6 +5373,235 @@ const characterAtlasData = { "frames": {
         "smartupdate": "$TexturePacker:SmartUpdate:6dff239c77179d6fe433e223edc521f3:f761f4c60daabe54a1c53ebfb46428a6:0bfa41ad2432204f88f9f54b9f6b3241$"
     }
 };
+
+
+/***/ }),
+
+/***/ "./src/utils/gameMechanics.ts":
+/*!************************************!*\
+  !*** ./src/utils/gameMechanics.ts ***!
+  \************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   findTargetPoint: () => (/* binding */ findTargetPoint),
+/* harmony export */   getPath: () => (/* binding */ getPath),
+/* harmony export */   getSafeDestination: () => (/* binding */ getSafeDestination),
+/* harmony export */   isClickToObject: () => (/* binding */ isClickToObject),
+/* harmony export */   isPathClear: () => (/* binding */ isPathClear),
+/* harmony export */   isPointInsideSquare: () => (/* binding */ isPointInsideSquare),
+/* harmony export */   reflectVector: () => (/* binding */ reflectVector)
+/* harmony export */ });
+/**
+ * Определяет, есть ли на пути персонажа препятствие
+ * @param startPosition начальная позиция персонажа
+ * @param endPosition координаты назначания
+ * @param obstacles координаты пикселей которые являются препятствием
+ * @param threshold чувствительность
+ * @returns
+ */
+function isPathClear(startPosition, endPosition, obstacles, threshold = 1) {
+    for (const obstacle of obstacles) {
+        if (Math.min(startPosition.x, endPosition.x) - threshold <= obstacle.x && obstacle.x <= Math.max(startPosition.x, endPosition.x) + threshold &&
+            Math.min(startPosition.y, endPosition.y) - threshold <= obstacle.y && obstacle.y <= Math.max(startPosition.y, endPosition.y) + threshold) {
+            return false;
+        }
+    }
+    return true;
+}
+/**
+ * Возвращяет находящиеся на расстоянии buffer от препятствия
+ * и если препятятвия нет то возврашает координаты без модификации
+ * @param startPosition исходное положение персонажа
+ * @param endPosition точка назначения
+ * @param obstacles массив координат препятствий
+ * @param buffer размер дистанции на которой персонаж останавливается перед препятствием
+ * @returns
+ */
+/**
+ * Вычисляет, был ли сделан клик по заданной области
+ * @param positionObject координаты объекта
+ * @param positionClick  координаты клика
+ * @param radius радиус в пикселях от кординат объекта
+ * @returns
+ */
+function isClickToObject(positionObject, positionClick, radius) {
+    const distance = Math.sqrt(Math.pow(positionClick.x - positionObject.x, 2) +
+        Math.pow(positionClick.y - positionObject.y, 2));
+    return distance <= radius;
+}
+/**
+ * Возврашяет координаты на которые должен быть перемещен мяч после удара
+ * @param playerPosition позиция игрока до удара
+ * @param ballPosition позиция мяча до удара
+ * @param hitPower сила удара
+ * @returns
+ */
+function findTargetPoint(playerPosition, ballPosition, hitPower) {
+    // Вектор от игрока к мячу (заметьте, что теперь мы вычитаем позицию игрока из позиции мяча)
+    const directionVector = {
+        x: ballPosition.x - playerPosition.x,
+        y: ballPosition.y - playerPosition.y,
+    };
+    // Если игрок и мяч находятся в одной точке, вектор направления не может быть вычислен
+    if (directionVector.x === 0 && directionVector.y === 0) {
+        throw new Error("Player and ball are in the same position");
+    }
+    // Длина вектора
+    const length = Math.sqrt(directionVector.x ** 2 + directionVector.y ** 2);
+    // Нормализация вектора
+    const normalizedVector = {
+        x: directionVector.x / length,
+        y: directionVector.y / length,
+    };
+    // Вектор перемещения
+    const movementVector = {
+        x: normalizedVector.x * hitPower,
+        y: normalizedVector.y * hitPower,
+    };
+    // Новая позиция мяча
+    const newBallPosition = {
+        x: ballPosition.x + movementVector.x,
+        y: ballPosition.y + movementVector.y,
+    };
+    // Проверка, чтобы мяч не вышел за пределы поля
+    // Убедитесь, что вы заменили /* максимальный x */ и /* максимальный y */
+    // на реальные ограничения вашего игрового поля
+    const checkedBallPosition = {
+        x: Math.max(0, Math.min(newBallPosition.x)),
+        y: Math.max(0, Math.min(newBallPosition.y)),
+    };
+    return checkedBallPosition;
+}
+function getIntersection(line1, line2) {
+    // Алгоритм нахождения точки пересечения двух линий
+    // Используем формулу нахождения пересечения из алгебраической геометрии
+    let denominator = (line1.p1.x - line1.p2.x) * (line2.p1.y - line2.p2.y) - (line1.p1.y - line1.p2.y) * (line2.p1.x - line2.p2.x);
+    if (denominator === 0) {
+        return null; // Линии параллельны или совпадают
+    }
+    let a = line1.p1.y - line2.p1.y;
+    let b = line1.p1.x - line2.p1.x;
+    let numerator1 = (line2.p2.x - line2.p1.x) * a - (line2.p2.y - line2.p1.y) * b;
+    let numerator2 = (line1.p2.x - line1.p1.x) * a - (line1.p2.y - line1.p1.y) * b;
+    a = numerator1 / denominator;
+    b = numerator2 / denominator;
+    // Проверяем, лежит ли точка пересечения на обеих линиях-отрезках
+    if (a >= 0 && a <= 1 && b >= 0 && b <= 1) {
+        return {
+            x: line1.p1.x + a * (line1.p2.x - line1.p1.x),
+            y: line1.p1.y + a * (line1.p2.y - line1.p1.y)
+        };
+    }
+    return null;
+}
+function getSafeDestination(startPosition, endPosition, obstacles, buffer = 1) {
+    // Рассчитываем направление и длину вектора движения
+    const dir = { x: endPosition.x - startPosition.x, y: endPosition.y - startPosition.y };
+    const mag = Math.sqrt(dir.x ** 2 + dir.y ** 2);
+    const normDir = { x: dir.x / mag, y: dir.y / mag }; // Нормализованный вектор направления
+    // Переменные для хранения ближайшего пересечения и его расстояния
+    let closestIntersection = null;
+    let closestDistance = mag;
+    // Пересечение движения с каждым препятствием
+    obstacles.forEach(obstacle => {
+        const intersection = getIntersection({ p1: startPosition, p2: endPosition, normal: normDir }, obstacle);
+        if (intersection) {
+            const distToIntersection = Math.hypot(intersection.x - startPosition.x, intersection.y - startPosition.y);
+            if (distToIntersection < closestDistance) {
+                closestDistance = distToIntersection - buffer + 2; // Учитываем буфер
+                closestIntersection = intersection;
+            }
+        }
+    });
+    // Возвращаем ближайшую точку до пересечения с учетом буфера
+    if (closestIntersection && closestDistance > 0) {
+        return {
+            x: Math.floor(startPosition.x + closestDistance * normDir.x),
+            y: Math.floor(startPosition.y + closestDistance * normDir.y)
+        };
+    }
+    // Возвращаем конечную точку, если пересечений нет
+    return endPosition;
+}
+/**
+ * Находит вектор отражения от прамого угла
+ * @param startPoint начальная позиция
+ * @param collisionPoint точка перечечения с препятствием
+ * @param targetPoint когечная точка
+ * @param normal нормаль {x:1, y:0} или {x:0, y:1}
+ * @returns
+ */
+function reflectVector(startPoint, collisionPoint, targetPoint, normal) {
+    // Вектор движения от начальной точки до точки столкновения
+    let directionVector = { x: targetPoint.x - collisionPoint.x, y: targetPoint.y - collisionPoint.y };
+    // Отражение по оси X
+    if (Math.abs(normal.x) === 1 && Math.abs(normal.y) === 0) {
+        return {
+            x: collisionPoint.x - directionVector.x,
+            y: targetPoint.y
+        };
+    }
+    // Отражение по оси Y
+    else if (Math.abs(normal.x) === 0 && Math.abs(normal.y) === 1) {
+        return {
+            x: targetPoint.x,
+            y: collisionPoint.y - directionVector.y
+        };
+    }
+}
+function getPath(startPosition, endPosition, obstacles, buffer = 1) {
+    let path = []; // Инициализация пути
+    // Рассчитываем направление и длину вектора движения
+    const dir = { x: endPosition.x - startPosition.x, y: endPosition.y - startPosition.y };
+    const mag = Math.sqrt(dir.x ** 2 + dir.y ** 2);
+    const normDir = { x: dir.x / mag, y: dir.y / mag }; // Нормализованный вектор направления
+    // Переменные для хранения ближайшего пересечения и его расстояния
+    let closestIntersection = null;
+    let closestDistance = mag;
+    // Пересечение движения с каждым препятствием
+    let xLine = null; // Сохраняем ближайшую линию с которой произошло пересечение
+    obstacles.forEach(obstacle => {
+        const intersection = getIntersection({ p1: startPosition, p2: endPosition, normal: normDir }, obstacle);
+        if (intersection) {
+            const distToIntersection = Math.hypot(intersection.x - startPosition.x, intersection.y - startPosition.y);
+            if (distToIntersection < closestDistance) {
+                closestDistance = distToIntersection - buffer + 2; // Учитываем буфер
+                closestIntersection = intersection;
+                xLine = obstacle;
+            }
+        }
+    });
+    // Возвращаем ближайшую точку до пересечения с учетом буфера
+    if (closestIntersection && closestDistance > 0) {
+        const closestPoint = {
+            x: Math.floor(startPosition.x + closestDistance * normDir.x),
+            y: Math.floor(startPosition.y + closestDistance * normDir.y)
+        };
+        let newDispansePoint = reflectVector(startPosition, closestPoint, endPosition, xLine.normal);
+        // Объединяем текущий путь с результатом рекурсивного вызова
+        path.push(closestPoint);
+        path = path.concat(getPath(closestPoint, newDispansePoint, obstacles, buffer));
+    }
+    else {
+        path.push(endPosition);
+    }
+    return path;
+}
+/**
+ * Определяет, находится ли точки внутри фигуры
+ * @param squareCorners
+ * @param testPoint
+ * @returns
+ */
+function isPointInsideSquare(squareCorners, testPoint) {
+    const topLeft = squareCorners[0];
+    const bottomRight = squareCorners[2];
+    return (testPoint.x >= topLeft.x && testPoint.x <= bottomRight.x &&
+        testPoint.y >= topLeft.y && testPoint.y <= bottomRight.y);
+}
 
 
 /***/ }),
@@ -5767,6 +6401,17 @@ exports.Url = Url;
 
 "use strict";
 module.exports = __webpack_require__.p + "img/run.png";
+
+/***/ }),
+
+/***/ "./src/img/items/ball.png":
+/*!********************************!*\
+  !*** ./src/img/items/ball.png ***!
+  \********************************/
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+module.exports = __webpack_require__.p + "img/ball.png";
 
 /***/ }),
 
@@ -36913,10 +37558,18 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _img_character_run_png__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./img/character/run.png */ "./src/img/character/run.png");
 /* harmony import */ var _img_levels_lab404_png__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./img/levels/lab404.png */ "./src/img/levels/lab404.png");
 /* harmony import */ var _img_levels_labirint2_jpg__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./img/levels/labirint2.jpg */ "./src/img/levels/labirint2.jpg");
-/* harmony import */ var pixi_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! pixi.js */ "./node_modules/pixi.js/lib/index.mjs");
-/* harmony import */ var _models_Character__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./models/Character */ "./src/models/Character.ts");
-/* harmony import */ var _animation_controls__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./animation/controls */ "./src/animation/controls.ts");
-/* harmony import */ var _utils_configurations__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./utils/configurations */ "./src/utils/configurations.ts");
+/* harmony import */ var _img_items_ball_png__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./img/items/ball.png */ "./src/img/items/ball.png");
+/* harmony import */ var pixi_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! pixi.js */ "./node_modules/pixi.js/lib/index.mjs");
+/* harmony import */ var _models_Character__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./models/Character */ "./src/models/Character.ts");
+/* harmony import */ var _animation_controls__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./animation/controls */ "./src/animation/controls.ts");
+/* harmony import */ var _utils_configurations__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./utils/configurations */ "./src/utils/configurations.ts");
+/* harmony import */ var _utils_gameMechanics__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./utils/gameMechanics */ "./src/utils/gameMechanics.ts");
+/* harmony import */ var _models_Ball__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./models/Ball */ "./src/models/Ball.ts");
+/* harmony import */ var _utils_Hepters__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./utils/Hepters */ "./src/utils/Hepters.ts");
+/* harmony import */ var _models_CollitionObjects__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./models/CollitionObjects */ "./src/models/CollitionObjects.ts");
+/* harmony import */ var _utils_Draw__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./utils/Draw */ "./src/utils/Draw.ts");
+/* harmony import */ var _utils_Collition__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./utils/Collition */ "./src/utils/Collition.ts");
+/* harmony import */ var _models_Shaders__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ./models/Shaders */ "./src/models/Shaders.ts");
 
 
 
@@ -36927,92 +37580,117 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-const app = new pixi_js__WEBPACK_IMPORTED_MODULE_5__.Application({
+
+
+
+
+
+
+
+
+const app = new pixi_js__WEBPACK_IMPORTED_MODULE_6__.Application({
     width: window.innerWidth,
     height: window.innerHeight,
     antialias: true,
-    backgroundAlpha: 0,
+    backgroundAlpha: 1,
     resolution: 1
 });
 document.body.appendChild(app.view);
-const textureLevel = pixi_js__WEBPACK_IMPORTED_MODULE_5__.Texture.from('./img/labirint2.jpg');
-const spriteLevel = new pixi_js__WEBPACK_IMPORTED_MODULE_5__.Sprite(textureLevel);
-spriteLevel.anchor.set(0.5);
-spriteLevel.x = window.innerWidth / 2;
-spriteLevel.y = window.innerHeight / 2;
-app.stage.addChild(spriteLevel);
-let blackPixels = [];
-let whitePixels = [];
-const graphics = new pixi_js__WEBPACK_IMPORTED_MODULE_5__.Graphics();
-graphics.beginFill(0xFF0000); // Цвет кружка
-graphics.drawCircle(0, 0, 23); // Рисуем кружок с радиусом 10
-graphics.endFill();
-const texture = app.renderer.generateTexture(graphics);
-const container = new pixi_js__WEBPACK_IMPORTED_MODULE_5__.ParticleContainer();
-app.stage.addChild(container);
-function addSprites(coordinatesArray) {
-    coordinatesArray.forEach((coord) => {
-        const sprite = new pixi_js__WEBPACK_IMPORTED_MODULE_5__.Sprite(texture);
-        sprite.position.set(coord.x + spriteLevel.x, coord.y + spriteLevel.y);
-        container.addChild(sprite);
-    });
-}
-setTimeout(() => {
-    const renderer = pixi_js__WEBPACK_IMPORTED_MODULE_5__.autoDetectRenderer();
-    const pixels = renderer.extract.pixels(spriteLevel);
-    const width = spriteLevel.texture.width;
-    const height = spriteLevel.texture.height;
-    const spriteCenterX = spriteLevel.x;
-    const spriteCenterY = spriteLevel.y;
-    const halfWidth = width / 2;
-    const halfHeight = height / 2;
-    for (let i = 0; i < pixels.length; i += 4) {
-        let r = pixels[i];
-        let g = pixels[i + 1];
-        let b = pixels[i + 2];
-        let localX = (i / 4) % width;
-        let localY = Math.floor((i / 4) / width);
-        // Учитываем положение и точку привязки spriteLevel
-        let globalX = spriteCenterX - halfWidth + localX;
-        let globalY = spriteCenterY - halfHeight + localY;
-        if (r === 0 && g === 0 && b === 0) {
-            blackPixels.push({ x: Math.floor(globalX), y: Math.floor(globalY) });
-        }
-        else if (r === 255 && g === 255 && b === 255) {
-            whitePixels.push({ x: globalX, y: globalY });
-        }
-    }
-    console.log(blackPixels.length);
-    addSprites(blackPixels);
-    for (let i = 0; i < blackPixels.length; i++) {
-        console.log(blackPixels[i]);
-    }
-}, 5000);
-const banny = new _models_Character__WEBPACK_IMPORTED_MODULE_6__.Player(_utils_configurations__WEBPACK_IMPORTED_MODULE_8__.characterAtlasData, { x: window.innerWidth / 2, y: window.innerHeight / 2 });
-banny.initPlayer(app.stage);
-const movaAction = new _animation_controls__WEBPACK_IMPORTED_MODULE_7__.AnimationPosition(400, app.ticker);
+const planeGeometry = new pixi_js__WEBPACK_IMPORTED_MODULE_6__.PlaneGeometry(window.innerWidth, window.innerHeight);
+const plane = new pixi_js__WEBPACK_IMPORTED_MODULE_6__.Mesh(planeGeometry, _models_Shaders__WEBPACK_IMPORTED_MODULE_16__.lineShader);
+app.stage.addChild(plane);
+const collitions = new _utils_Collition__WEBPACK_IMPORTED_MODULE_15__.Collisions(); //Препятствия
+_models_CollitionObjects__WEBPACK_IMPORTED_MODULE_13__.objectsColl.forEach(element => {
+    app.stage.addChild((0,_utils_Draw__WEBPACK_IMPORTED_MODULE_14__.DrawBoundingBox)(element));
+    collitions.addCollition(element);
+});
+collitions.initCollitions();
+const colLine = collitions.getCollitionsItems();
+const goal = new _utils_Collition__WEBPACK_IMPORTED_MODULE_15__.Collisions(); //Ворота
+app.stage.addChild((0,_utils_Draw__WEBPACK_IMPORTED_MODULE_14__.DrawBoundingBox)(_models_CollitionObjects__WEBPACK_IMPORTED_MODULE_13__.goalEdge[0]));
+goal.addCollition(_models_CollitionObjects__WEBPACK_IMPORTED_MODULE_13__.goalEdge[0]);
+goal.initCollitions();
+const goalLInes = goal.getCollitionsItems();
+const testPoint = { x: 597, y: 155 };
+const banny = new _models_Character__WEBPACK_IMPORTED_MODULE_7__.Player(_utils_configurations__WEBPACK_IMPORTED_MODULE_9__.characterAtlasData, { x: window.innerWidth / 2, y: window.innerHeight / 2 });
+banny.init(app.stage);
+const characterAction = new _animation_controls__WEBPACK_IMPORTED_MODULE_8__.AnimationPosition(400, app.ticker);
+const ball = new _models_Ball__WEBPACK_IMPORTED_MODULE_11__.Ball('/img/ball.png', { x: Math.random() * window.innerWidth, y: Math.random() * window.innerHeight });
+ball.init(app.stage);
+const ballAction = new _animation_controls__WEBPACK_IMPORTED_MODULE_8__.AnimationPosition(900, app.ticker);
+const goal2 = new _models_Ball__WEBPACK_IMPORTED_MODULE_11__.Goal('/img/goal.png', { x: Math.random() * window.innerWidth, y: Math.random() * window.innerHeight });
+goal2.init(app.stage);
 document.addEventListener('click', (event) => {
-    console.log(event.clientX);
-    console.log(event.clientY);
-    movaAction.updateTicker(app.ticker);
-    movaAction.setAnimationCoordinate(banny.getPosition(), { x: event.clientX, y: event.clientY });
-    movaAction.start({
+    characterAction.resetToDefault();
+    const isKick = (0,_utils_gameMechanics__WEBPACK_IMPORTED_MODULE_10__.isClickToObject)(ball.getPosition(), { x: event.clientX, y: event.clientY }, 40);
+    const reflects = (0,_utils_gameMechanics__WEBPACK_IMPORTED_MODULE_10__.getPath)(banny.getPosition(), { x: event.clientX, y: event.clientY }, colLine, 15);
+    reflects.unshift(banny.getPosition());
+    /* const lineR = drawLine(reflects)
+    app.stage.addChild(lineR) */
+    characterAction.updateTicker(app.ticker);
+    characterAction.setMultiplePath(reflects);
+    if (isKick) {
+        var playerStart = banny.getPosition();
+    }
+    /*  characterAction.start({
+         onStart: () => { banny.run() },
+         onUpdate: (position) => { banny.moveTo({ x: position.x, y: position.y }) },
+         onStop: () => {
+             banny.stop()
+             if (isKick) {
+                 const hitPower = getDistance(playerStart, ball.getPosition()) //Дистация на которую улетит мяч, равна дистанции до удара
+                 const target = findTargetPoint(playerStart, ball.getPosition(), hitPower)
+                 ballAction.updateTicker(app.ticker)
+                 ballAction.setAnimationCoordinate(ball.getPosition(), target)
+                 ballAction.start({
+                     onStart:() => {},
+                     onUpdate: (position) => { ball.moveTo({ x: position.x, y: position.y }) },
+                     onStop: () => {}
+ 
+                 })
+             }
+         }
+     }); */
+    characterAction.startPath({
         onStart: () => { banny.run(); },
         onUpdate: (position) => { banny.moveTo({ x: position.x, y: position.y }); },
-        onStop: () => { banny.stop(); }
+        onStop: () => {
+            banny.stop();
+            if (isKick) {
+                ballAction.resetToDefault();
+                const hitPower = (0,_utils_Hepters__WEBPACK_IMPORTED_MODULE_12__.getDistance)(playerStart, ball.getPosition()); //Дистация на которую улетит мяч, равна дистанции до удара 
+                const target = (0,_utils_gameMechanics__WEBPACK_IMPORTED_MODULE_10__.findTargetPoint)(playerStart, ball.getPosition(), hitPower);
+                const pathToBall = (0,_utils_gameMechanics__WEBPACK_IMPORTED_MODULE_10__.getPath)(ball.getPosition(), target, colLine, 36);
+                pathToBall.unshift(ball.getPosition());
+                console.log(pathToBall);
+                ballAction.updateTicker(app.ticker);
+                ballAction.setMultiplePath(pathToBall);
+                ballAction.startPath({
+                    onStart: () => { },
+                    onUpdate: (position) => { ball.moveTo({ x: position.x, y: position.y }); },
+                    onStop: () => { }
+                });
+            }
+        }
     });
 });
+/* const threshold = 2;
 app.ticker.add(() => {
     if (blackPixels.length > 0) {
         let pos = banny.getPosition();
-        let intersection = blackPixels.some(item => item.x === pos.x && item.y === pos.y);
-        if (intersection)
-            console.log(`Пересечение на координатах ${pos.x} ${pos.y}`);
+
+        let intersection = blackPixels.some(item =>
+            Math.abs(item.x - pos.x) <= threshold && Math.abs(item.y - pos.y) <= threshold
+        );
+
+        if (intersection) console.log(`Пересечение на координатах ${pos.x} ${pos.y}`);
     }
 });
+
+ */ 
 
 })();
 
 /******/ })()
 ;
-//# sourceMappingURL=index.ab355492060ea79cebab.js.map
+//# sourceMappingURL=index.7550825450ec73041509.js.map

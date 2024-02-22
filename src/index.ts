@@ -4,6 +4,7 @@ import './img/character/run.png'
 import './img/levels/lab404.png'
 import './img/levels/labirint2.jpg'
 import './img/items/ball.png'
+import './img/items/goal.png'
 
 import { Application } from 'pixi.js';
 import * as PIXI from 'pixi.js';
@@ -12,7 +13,7 @@ import { AnimationPosition } from './animation/controls';
 
 import { characterAtlasData } from './utils/configurations';
 import { findTargetPoint, getPath, getSafeDestination, isClickToObject, isPathClear, isPointInsideSquare, reflectVector } from './utils/gameMechanics'
-import { Ball } from './models/Ball'
+import { Ball, Goal } from './models/Ball'
 import { getDistance, simplyfyCollitionObj } from './utils/Hepters'
 import { objectsColl, goalEdge } from './models/CollitionObjects'
 import { DrawBoundingBox, drawLine } from './utils/Draw'
@@ -46,15 +47,18 @@ collitions.initCollitions()
 const colLine = collitions.getCollitionsItems()
 
 const goal = new Collisions() //Ворота
-app.stage.addChild(DrawBoundingBox(goalEdge[0]))
+//app.stage.addChild(DrawBoundingBox(goalEdge[0]))
 goal.addCollition(goalEdge[0])
 goal.initCollitions()
+
+//const testPoint = {x:597,y:155}
 const goalLInes = goal.getCollitionsItems()
+//const res = isPointInsideSquare(simplyfyCollitionObj(goalLInes), testPoint)
 
-console.log(simplyfyCollitionObj(goalLInes))
-const testPoint = {x:597,y:155}
-console.log(isPointInsideSquare(simplyfyCollitionObj(goalLInes), testPoint))
 
+
+const goal2 = new Goal('/img/goal.png', { x: window.innerWidth /2 , y: 85 })
+goal2.init(app.stage)
 
 const banny = new Player(characterAtlasData, { x: window.innerWidth / 2, y: window.innerHeight / 2 })
 banny.init(app.stage)
@@ -63,6 +67,9 @@ const characterAction = new AnimationPosition(400, app.ticker)
 const ball = new Ball('/img/ball.png', { x: Math.random() * window.innerWidth, y: Math.random() * window.innerHeight })
 ball.init(app.stage)
 const ballAction = new AnimationPosition(900, app.ticker)
+
+
+
 
 document.addEventListener('click', (event) => {
     characterAction.resetToDefault()
@@ -114,13 +121,20 @@ document.addEventListener('click', (event) => {
                 const target = findTargetPoint(playerStart, ball.getPosition(), hitPower)
                 const pathToBall = getPath(ball.getPosition(), target, colLine, 36)
                 pathToBall.unshift(ball.getPosition())
-                console.log(pathToBall)
                 ballAction.updateTicker(app.ticker)
                 ballAction.setMultiplePath(pathToBall)
                 ballAction.startPath({
                     onStart:() => {},
                     onUpdate: (position) => { ball.moveTo({ x: position.x, y: position.y }) },
-                    onStop: () => {}
+                    onStop: () => {
+                        const isGoal = isPointInsideSquare(simplyfyCollitionObj(goalLInes), ball.getPosition())
+                        if(isGoal) {
+                            console.log(isGoal)
+                            setTimeout(()=>{ball.moveTo({x: window.innerWidth/2, y: window.innerHeight/2})},100)
+                    }      
+                            
+                        }
+                        
 
                 })
             }
