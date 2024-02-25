@@ -120,7 +120,7 @@ export class AnimationPosition {
                     this.ticker.remove(this.animationHandler);
                 } 
 
-                let currentTime = performance.now(); //Тукущее время
+                let currentTime = performance.now(); //Текущее время
                 if (!startTime) startTime = currentTime;
                 let elapsedTime = currentTime - startTime; //Время с начала анимации
                 
