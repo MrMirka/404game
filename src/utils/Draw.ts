@@ -25,3 +25,11 @@ export function drawLine(points: Point[]): PIXI.Graphics {
     });
     return line
 }
+export function drawSimpleLine(start: Point, end: Point): PIXI.Graphics {
+    let line = new PIXI.Graphics();
+    line.lineStyle(2, 0xFFFFFF, 1); // Задаем стиль линии (толщина, цвет, прозрачность)
+    line.moveTo(start.x, start.y);
+    line.lineTo(end.x, end.y);
+    return line
+}
+

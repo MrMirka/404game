@@ -16,9 +16,10 @@ import { findTargetPoint, getPath, getSafeDestination, isClickToObject, isPathCl
 import { Ball, Goal } from './models/Ball'
 import { getDistance, simplyfyCollitionObj } from './utils/Hepters'
 import { objectsColl, goalEdge } from './models/CollitionObjects'
-import { DrawBoundingBox, drawLine } from './utils/Draw'
+import { DrawBoundingBox, drawLine, drawSimpleLine } from './utils/Draw'
 import { Collisions } from './utils/Collition'
 import { lineShader } from './models/Shaders'
+import { Strike } from './utils/Strike'
 
 let startCount = 0
 
@@ -66,6 +67,8 @@ const ball = new Ball('/img/ball.png', { x: window.innerWidth / 2, y: window.inn
 ball.init(app.stage)
 const ballAction = new AnimationPosition(900, app.ticker)
 
+let tmpLine: PIXI.Graphics = null
+
 
 
 
@@ -86,11 +89,23 @@ document.addEventListener('click', (event) => {
 
 
     characterAction.startPath({
-        onStart: () => { banny.run() },
+        onStart: () => { 
+            banny.run()
+         },
         onUpdate: (position) => { banny.moveTo({ x: position.x, y: position.y }) },
         onStop: () => {
             banny.stop()
             if (isKick) {
+                
+                const strike = new Strike(banny.getPosition())
+                strike.init(position => {
+                    if (tmpLine) {
+                        app.stage.removeChild(tmpLine)
+                    }
+                    const arrow = drawSimpleLine(banny.getPosition(), { x: position.x, y: position.y })
+                    tmpLine = arrow
+                    app.stage.addChild(tmpLine);
+                })
                 ballAction.resetToDefault()
                 const hitPower = getDistance(playerStart, ball.getPosition()) //Дистация на которую улетит мяч, равна дистанции до удара 
                 const target = findTargetPoint(playerStart, ball.getPosition(), hitPower * 3)
