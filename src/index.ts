@@ -21,7 +21,11 @@ import { Collisions } from './utils/Collition'
 import { lineShader } from './models/Shaders'
 import { Strike } from './utils/Strike'
 
-let startCount = 0
+let startCount = 0 //Счетчик голов
+let waitStrike = false
+let strike: Strike
+
+
 
 const app = new Application(
     {
@@ -73,75 +77,120 @@ let tmpLine: PIXI.Graphics = null
 
 
 document.addEventListener('click', (event) => {
-    characterAction.resetToDefault()
-    const isKick = isClickToObject(ball.getPosition(), { x: event.clientX, y: event.clientY }, 40);
-    const reflects = getPath(banny.getPosition(), { x: event.clientX, y: event.clientY }, colLine, 15)
+    if(!waitStrike) {
+        const isKick = isClickToObject(ball.getPosition(), { x: event.clientX, y: event.clientY }, 40);
 
-    reflects.unshift(banny.getPosition())
-
-    characterAction.updateTicker(app.ticker)
-    characterAction.setMultiplePath(reflects)
-
-
-    if (isKick) {
-        var playerStart = banny.getPosition()
-    }
-
-
-    characterAction.startPath({
-        onStart: () => { 
-            banny.run()
-         },
-        onUpdate: (position) => { banny.moveTo({ x: position.x, y: position.y }) },
-        onStop: () => {
-            banny.stop()
-            if (isKick) {
-                
-                const strike = new Strike(banny.getPosition())
-                strike.init(position => {
-                    if (tmpLine) {
-                        app.stage.removeChild(tmpLine)
-                    }
-                    const arrow = drawSimpleLine(banny.getPosition(), { x: position.x, y: position.y })
-                    tmpLine = arrow
-                    app.stage.addChild(tmpLine);
-                })
-                ballAction.resetToDefault()
-                const hitPower = getDistance(playerStart, ball.getPosition()) //Дистация на которую улетит мяч, равна дистанции до удара 
-                const target = findTargetPoint(playerStart, ball.getPosition(), hitPower * 3)
-                const pathToBall = getPath(ball.getPosition(), target, colLine, 36)
-                pathToBall.unshift(ball.getPosition())
-                ballAction.updateTicker(app.ticker)
-                ballAction.setMultiplePath(pathToBall)
-                ballAction.startPath({
-                    onStart: () => { },
-                    onUpdate: (position) => { ball.moveTo({ x: position.x, y: position.y }) },
-                    onStop: () => {
-                        const isOutOfField = isPointInsideSquare([
-                            { x: 0, y: 0 },
-                            { x: window.innerWidth, y: 0 },
-                            { x: window.innerWidth, y: window.innerHeight },
-                            { x: 0, y: window.innerHeight }
-                        ], ball.getPosition())
-
-                        const isGoal = isPointInsideSquare(simplyfyCollitionObj(goalLInes), ball.getPosition())
-                        if (!isOutOfField) {
-                            startCount--
-                            count.textContent = String(startCount)
-                            setTimeout(() => { ball.moveTo({ x: window.innerWidth / 2, y: window.innerHeight / 2 }) }, 100)
-                        } else if (isGoal) {
-                            startCount++
-                            count.textContent = String(startCount)
-                            setTimeout(() => { ball.moveTo({ x: window.innerWidth / 2, y: window.innerHeight / 2 }) }, 100)
-                        }
-
-                    }
-
-
-                })
-            }
+        if (isKick) {
+            var playerStart = banny.getPosition()
         }
-    });
+    
+    
+        characterAction.resetToDefault()
+        const reflects = getPath(banny.getPosition(), { x: event.clientX, y: event.clientY }, colLine, 15)
+    
+        reflects.unshift(banny.getPosition())
+    
+        characterAction.updateTicker(app.ticker)
+        characterAction.setMultiplePath(reflects)
+    
+    
+     
+    
+        characterAction.startPath({
+            onStart: () => { 
+                banny.run()
+             },
+            onUpdate: (position) => { banny.moveTo({ x: position.x, y: position.y }) },
+            onStop: () => {
+                banny.stop()
+                if (isKick) {
+                    strike = new Strike(banny.getPosition())
+                    strike.init(position => {
+                        if (tmpLine) {
+                            app.stage.removeChild(tmpLine)
+                        }
+                        const arrow = drawSimpleLine(banny.getPosition(), { x: position.x, y: position.y })
+                        tmpLine = arrow
+                        app.stage.addChild(tmpLine);
+                    })
+                    waitStrike = true
+    
+                   /*  ballAction.resetToDefault()
+                    const hitPower = getDistance(playerStart, ball.getPosition()) //Дистация на которую улетит мяч, равна дистанции до удара 
+                    const target = findTargetPoint(playerStart, ball.getPosition(), hitPower * 3)
+                    const pathToBall = getPath(ball.getPosition(), target, colLine, 36)
+                    pathToBall.unshift(ball.getPosition())
+                    ballAction.updateTicker(app.ticker)
+                    ballAction.setMultiplePath(pathToBall)
+                    ballAction.startPath({
+                        onStart: () => { },
+                        onUpdate: (position) => { ball.moveTo({ x: position.x, y: position.y }) },
+                        onStop: () => {
+                            const isOutOfField = isPointInsideSquare([
+                                { x: 0, y: 0 },
+                                { x: window.innerWidth, y: 0 },
+                                { x: window.innerWidth, y: window.innerHeight },
+                                { x: 0, y: window.innerHeight }
+                            ], ball.getPosition())
+    
+                            const isGoal = isPointInsideSquare(simplyfyCollitionObj(goalLInes), ball.getPosition())
+                            if (!isOutOfField) {
+                                startCount--
+                                count.textContent = String(startCount)
+                                setTimeout(() => { ball.moveTo({ x: window.innerWidth / 2, y: window.innerHeight / 2 }) }, 100)
+                            } else if (isGoal) {
+                                startCount++
+                                count.textContent = String(startCount)
+                                setTimeout(() => { ball.moveTo({ x: window.innerWidth / 2, y: window.innerHeight / 2 }) }, 100)
+                            }
+    
+                        }
+    
+    
+                    }) */
+                }
+            }
+        });
+    } else {
+        if(strike) {
+            console.log(ball.getPosition())
+            console.log(strike.getEndPoint())
+            console.log(colLine)
+            ballAction.resetToDefault()
+            const pathToBall = getPath(ball.getPosition(), strike.getEndPoint(), colLine, 36)
+            pathToBall.unshift(ball.getPosition())
+            ballAction.updateTicker(app.ticker)
+            ballAction.setMultiplePath(pathToBall)
+            ballAction.startPath({
+                onStart: () => { },
+                onUpdate: (position) => { ball.moveTo({ x: position.x, y: position.y }) },
+                onStop: () => {
+                    const isOutOfField = isPointInsideSquare([
+                        { x: 0, y: 0 },
+                        { x: window.innerWidth, y: 0 },
+                        { x: window.innerWidth, y: window.innerHeight },
+                        { x: 0, y: window.innerHeight }
+                    ], ball.getPosition())
+    
+                    const isGoal = isPointInsideSquare(simplyfyCollitionObj(goalLInes), ball.getPosition())
+                    if (!isOutOfField) {
+                        startCount--
+                        count.textContent = String(startCount)
+                        setTimeout(() => { ball.moveTo({ x: window.innerWidth / 2, y: window.innerHeight / 2 }) }, 100)
+                    } else if (isGoal) {
+                        startCount++
+                        count.textContent = String(startCount)
+                        setTimeout(() => { ball.moveTo({ x: window.innerWidth / 2, y: window.innerHeight / 2 }) }, 100)
+                    }
+                    waitStrike = false
+                }
+    
+    
+            })
+        }
+       
+    }
+   
 
 
 
